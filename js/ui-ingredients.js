@@ -11,20 +11,24 @@ const UIIngredients = {
     const view = document.getElementById("view");
     const ingredients = Storage.getIngredients().sort((a, b) => a.name.localeCompare(b.name));
 
-    const rows = ingredients.map((ing) => `
+    const rows = ingredients.map((ing) => {
+      const units = Nutrition.availableUnits(ing).map((u) => u.label);
+      const unitsHint = units.length > 1 ? ` · ${units.join("/")}` : "";
+      return `
       <div class="card card-tap" data-id="${ing.id}">
         <div class="card-row">
           <div>
             <div style="font-weight:600;">${ing.name}</div>
             <div class="muted" style="margin-top:2px;">
               <span class="pill">${CATEGORY_LABELS[ing.category] || ing.category}</span>
-              &nbsp;${Nutrition.round0(ing.kcal)} kcal/100g · ₲${ing.pricePerKg.toLocaleString("es-PY")}/kg
+              &nbsp;${Nutrition.round0(ing.kcal)} kcal/100g · ₲${ing.pricePerKg.toLocaleString("es-PY")}/kg${unitsHint}
             </div>
           </div>
           <span class="muted mono">${Nutrition.round1(ing.protein)}P</span>
         </div>
       </div>
-    `).join("");
+    `;
+    }).join("");
 
     view.innerHTML = `
       <div class="eyebrow">Base de datos</div>
@@ -74,6 +78,16 @@ const UIIngredients = {
       <label>Precio por kg (₲)</label>
       <input id="f-price" type="number" step="1" value="${v.pricePerKg}">
 
+      <div class="divider"></div>
+      <div style="font-weight:600; font-size:13.5px;">Medidas de cocina (opcional)</div>
+      <p class="muted" style="margin-top:4px;">Completá sólo lo que aplique. Dejá en blanco o en 0 lo que no uses — esa unidad no va a aparecer al armar lotes.</p>
+      <div class="field-row">
+        <div><label>g por ml (líquidos)</label><input id="f-mlgrams" type="number" step="0.01" value="${v.mlGrams || ""}" placeholder="ej: 0.91"></div>
+        <div><label>g por cdta</label><input id="f-tspgrams" type="number" step="0.1" value="${v.tspGrams || ""}" placeholder="ej: 4.5"></div>
+      </div>
+      <label>g por cda (cucharada)</label>
+      <input id="f-tbspgrams" type="number" step="0.1" value="${v.tbspGrams || ""}" placeholder="ej: 13.6">
+
       <div class="flex-between" style="margin-top:20px; gap:10px;">
         ${ing ? `<button class="btn btn-danger" id="delIngBtn">Eliminar</button>` : `<span></span>`}
         <button class="btn btn-primary" id="saveIngBtn">Guardar</button>
@@ -94,6 +108,9 @@ const UIIngredients = {
         fiber: parseFloat(document.getElementById("f-fiber").value) || 0,
         sodium: parseFloat(document.getElementById("f-sodium").value) || 0,
         pricePerKg: parseFloat(document.getElementById("f-price").value) || 0,
+        mlGrams: parseFloat(document.getElementById("f-mlgrams").value) || undefined,
+        tspGrams: parseFloat(document.getElementById("f-tspgrams").value) || undefined,
+        tbspGrams: parseFloat(document.getElementById("f-tbspgrams").value) || undefined,
       };
       Storage.upsertIngredient(updated);
       closeModal();

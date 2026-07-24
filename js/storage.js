@@ -24,7 +24,27 @@ const Storage = {
       localStorage.setItem(DB_KEYS.ingredients, JSON.stringify(seeded));
       return seeded;
     }
-    return JSON.parse(raw);
+    const list = JSON.parse(raw);
+    const migrated = this._migrateIngredients(list);
+    if (migrated.changed) {
+      localStorage.setItem(DB_KEYS.ingredients, JSON.stringify(migrated.list));
+    }
+    return migrated.list;
+  },
+
+  // Agrega ingredientes semilla nuevos (por nombre) que todavía no existan, sin tocar
+  // ediciones del usuario en los que ya tiene. No sobreescribe campos existentes.
+  _migrateIngredients(list) {
+    let changed = false;
+    const byName = new Map(list.map((i) => [i.name.trim().toLowerCase(), i]));
+    for (const seed of SEED_INGREDIENTS) {
+      const key = seed.name.trim().toLowerCase();
+      if (!byName.has(key)) {
+        list.push({ id: uid(), ...seed });
+        changed = true;
+      }
+    }
+    return { list, changed };
   },
   saveIngredients(list) {
     localStorage.setItem(DB_KEYS.ingredients, JSON.stringify(list));

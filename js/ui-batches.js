@@ -77,7 +77,9 @@ const UIBatches = {
       <div style="font-weight:600; font-size:13.5px; margin-bottom:6px;">Ingredientes</div>
       ${batch.items.map((it) => {
         const ing = ingredientsById[it.ingredientId];
-        return `<div class="flex-between muted" style="padding:4px 0;"><span>${ing ? ing.name : "(eliminado)"}</span><span class="mono">${it.grams}g</span></div>`;
+        const unitLabel = it.unit && it.unit !== "g" && Nutrition.UNIT_LABELS[it.unit];
+        const amountText = unitLabel ? `${it.amount} ${unitLabel} · ${Nutrition.round1(it.grams)}g` : `${Nutrition.round1(it.grams)}g`;
+        return `<div class="flex-between muted" style="padding:4px 0;"><span>${ing ? ing.name : "(eliminado)"}</span><span class="mono">${amountText}</span></div>`;
       }).join("")}
 
       <div class="flex-between" style="margin-top:20px; gap:8px; flex-wrap:wrap;">
@@ -127,9 +129,15 @@ const UIBatches = {
   openForm(id, prefill) {
     const existing = id ? Storage.getBatches().find((b) => b.id === id) : null;
     const base = existing || prefill || { name: "", servings: 4, items: [] };
-    let workingItems = base.items.map((it) => ({ ...it }));
     const ingredients = Storage.getIngredients().sort((a, b) => a.name.localeCompare(b.name));
     const ingredientsById = Object.fromEntries(ingredients.map((i) => [i.id, i]));
+    // normaliza items existentes (que sólo tienen grams) agregando amount/unit para edición
+    let workingItems = base.items.map((it) => ({
+      ingredientId: it.ingredientId,
+      grams: it.grams,
+      amount: it.amount != null ? it.amount : it.grams,
+      unit: it.unit || "g",
+    }));
 
     const ingOptions = (selectedId) => ingredients.map((i) =>
       `<option value="${i.id}" ${i.id === selectedId ? "selected" : ""}>${i.name}</option>`
@@ -159,25 +167,58 @@ const UIBatches = {
     const rowsEl = document.getElementById("ingRows");
     const previewEl = document.getElementById("livePreview");
 
+    const unitOptions = (ing, selectedUnit) => Nutrition.availableUnits(ing).map((u) =>
+      `<option value="${u.value}" ${u.value === selectedUnit ? "selected" : ""}>${u.label}</option>`
+    ).join("");
+
+    const recomputeGrams = (it) => {
+      const ing = ingredientsById[it.ingredientId];
+      it.grams = Nutrition.round1(Nutrition.toGrams(ing, it.amount, it.unit));
+    };
+
     const renderRows = () => {
       if (workingItems.length === 0) {
         rowsEl.innerHTML = `<p class="muted">Todavía no agregaste ingredientes.</p>`;
       } else {
-        rowsEl.innerHTML = workingItems.map((it, idx) => `
+        rowsEl.innerHTML = workingItems.map((it, idx) => {
+          const ing = ingredientsById[it.ingredientId];
+          const showGramsHint = it.unit !== "g" && ing;
+          return `
           <div class="ing-row" data-idx="${idx}">
-            <select class="row-ing">${ingOptions(it.ingredientId)}</select>
-            <input class="row-grams" type="number" min="0" step="1" value="${it.grams}" placeholder="gramos">
-            <button class="rm" data-rm="${idx}">✕</button>
+            <div class="ing-row-main">
+              <select class="row-ing">${ingOptions(it.ingredientId)}</select>
+              <div class="ing-row-amount">
+                <input class="row-amount" type="number" min="0" step="0.1" value="${it.amount}" placeholder="cantidad">
+                <select class="row-unit">${unitOptions(ing, it.unit)}</select>
+              </div>
+              <button class="rm" data-rm="${idx}">✕</button>
+            </div>
+            ${showGramsHint ? `<div class="muted ing-row-hint mono">≈ ${it.grams} g</div>` : ""}
           </div>
-        `).join("");
+        `;
+        }).join("");
         rowsEl.querySelectorAll(".ing-row").forEach((rowEl) => {
           const idx = parseInt(rowEl.dataset.idx, 10);
           rowEl.querySelector(".row-ing").addEventListener("change", (e) => {
             workingItems[idx].ingredientId = e.target.value;
+            // si la nueva unidad no aplica al ingrediente elegido, volvemos a gramos
+            const newIng = ingredientsById[e.target.value];
+            const stillValid = Nutrition.availableUnits(newIng).some((u) => u.value === workingItems[idx].unit);
+            if (!stillValid) workingItems[idx].unit = "g";
+            recomputeGrams(workingItems[idx]);
+            renderRows();
             renderPreview();
           });
-          rowEl.querySelector(".row-grams").addEventListener("input", (e) => {
-            workingItems[idx].grams = parseFloat(e.target.value) || 0;
+          rowEl.querySelector(".row-amount").addEventListener("input", (e) => {
+            workingItems[idx].amount = parseFloat(e.target.value) || 0;
+            recomputeGrams(workingItems[idx]);
+            renderRows();
+            renderPreview();
+          });
+          rowEl.querySelector(".row-unit").addEventListener("change", (e) => {
+            workingItems[idx].unit = e.target.value;
+            recomputeGrams(workingItems[idx]);
+            renderRows();
             renderPreview();
           });
         });
@@ -224,7 +265,7 @@ const UIBatches = {
     };
 
     document.getElementById("addRowBtn").addEventListener("click", () => {
-      workingItems.push({ ingredientId: ingredients[0] ? ingredients[0].id : "", grams: 0 });
+      workingItems.push({ ingredientId: ingredients[0] ? ingredients[0].id : "", amount: 0, unit: "g", grams: 0 });
       renderRows();
       renderPreview();
     });
