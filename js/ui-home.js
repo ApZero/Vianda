@@ -12,6 +12,13 @@ const UIHome = {
 
     const lowest = [...active].sort((a, b) => a.servingsRemaining - b.servingsRemaining)[0];
 
+    const today = todayISODate();
+    const expiringItems = Storage.getFrozenItems()
+      .filter((it) => it.useByDate)
+      .map((it) => ({ ...it, diffDays: Math.round((new Date(it.useByDate) - new Date(today)) / 86400000) }))
+      .filter((it) => it.diffDays <= settings.expiryWarningDays)
+      .sort((a, b) => a.diffDays - b.diffDays);
+
     view.innerHTML = `
       <div class="hero">
         <div class="flex-between">
@@ -23,6 +30,17 @@ const UIHome = {
         ${lowStock ? `<div class="hero-warning">⚠ Quedan pocas porciones (umbral: ${settings.lowStockThreshold}). Conviene preparar un lote nuevo pronto.</div>` : ""}
       </div>
 
+      ${expiringItems.length ? `
+      <div class="section-title"><h2>❄ Se están por vencer</h2></div>
+      <div class="card">
+        ${expiringItems.map((it) => `
+          <div class="flex-between" style="padding:4px 0;">
+            <span>${it.name}</span>
+            <span class="mono" style="color:${it.diffDays < 0 ? "var(--bad)" : "var(--ok)"};">${it.diffDays < 0 ? `vencido hace ${Math.abs(it.diffDays)}d` : it.diffDays === 0 ? "vence hoy" : `${it.diffDays}d`}</span>
+          </div>
+        `).join("")}
+      </div>` : ""}
+
       <div class="stat-grid">
         <div class="stat-box"><div class="num">${active.length}</div><div class="lbl">lotes activos</div></div>
         <div class="stat-box"><div class="num">${avgScore !== null ? avgScore : "—"}</div><div class="lbl">puntaje promedio</div></div>
@@ -33,7 +51,7 @@ const UIHome = {
       <div class="card">
         <div class="card-row">
           <div>
-            <div style="font-weight:600;">${lowest.name}</div>
+            <div style="font-weight:600;">#${lowest.number} ${lowest.name}</div>
             <div class="muted">${lowest.servingsRemaining} de ${lowest.servings} porciones</div>
           </div>
           <span class="score-badge ${Score.label(lowest.score.total).cls}">${lowest.score.total}</span>
@@ -73,6 +91,8 @@ const UIHome = {
       <input id="s-threshold" type="number" min="0" step="1" value="${settings.lowStockThreshold}">
       <label>Porciones que comen por día (referencia)</label>
       <input id="s-people" type="number" min="1" step="1" value="${settings.peoplePerDay}">
+      <label>Avisar de vencimientos con cuántos días de anticipación</label>
+      <input id="s-expiry" type="number" min="0" step="1" value="${settings.expiryWarningDays}">
 
       <div class="divider"></div>
       <div style="font-weight:600; font-size:13.5px; margin-bottom:8px;">Respaldo</div>
@@ -90,6 +110,7 @@ const UIHome = {
       const updated = {
         lowStockThreshold: parseInt(document.getElementById("s-threshold").value, 10) || 0,
         peoplePerDay: parseInt(document.getElementById("s-people").value, 10) || 1,
+        expiryWarningDays: parseInt(document.getElementById("s-expiry").value, 10) || 0,
       };
       Storage.saveSettings(updated);
       closeModal();

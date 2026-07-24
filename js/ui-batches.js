@@ -1,7 +1,7 @@
 const UIBatches = {
   render() {
     const view = document.getElementById("view");
-    const batches = Storage.getBatches().sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
+    const batches = Storage.getBatches().sort((a, b) => (b.number || 0) - (a.number || 0));
     const active = batches.filter((b) => b.status !== "archived");
     const archived = batches.filter((b) => b.status === "archived");
 
@@ -11,7 +11,7 @@ const UIBatches = {
       <div class="card card-tap ${b.status === "archived" ? "tag-archived" : ""}" data-id="${b.id}">
         <div class="card-row">
           <div>
-            <div style="font-weight:600;">${b.name}</div>
+            <div style="font-weight:600;"><span class="pill mono" style="margin-right:6px;">#${b.number}</span>${b.name}</div>
             <div class="muted" style="margin-top:2px;">${b.servings} porciones · ₲${Nutrition.round0(b.perServing.cost).toLocaleString("es-PY")}/porción</div>
           </div>
           <span class="score-badge ${scoreLabel.cls}">${b.score.total}</span>
@@ -49,11 +49,11 @@ const UIBatches = {
 
     openModal(`
       <div class="modal-header">
-        <h3>${batch.name}</h3>
+        <h3><span class="pill mono" style="margin-right:6px;">#${batch.number}</span>${batch.name}</h3>
         <button class="modal-close" onclick="closeModal()">✕</button>
       </div>
       <div class="flex-between">
-        <span class="pill">${batch.servings} porciones totales</span>
+        <span class="pill">${batch.servingsRemaining} de ${batch.servings} porciones restantes</span>
         <span class="score-badge ${scoreLabel.cls}">${batch.score.total} · ${scoreLabel.text}</span>
       </div>
 
@@ -70,7 +70,11 @@ const UIBatches = {
       </div>
 
       <div class="divider"></div>
-      <div style="font-weight:600; font-size:13.5px;">Sugerencias para el próximo lote</div>
+      <div style="font-weight:600; font-size:13.5px;">🧊 Al servir, para completar la porción</div>
+      <ul class="suggestion-list">${Score.servingAdditions(batch.perServing).map((s) => `<li>${s}</li>`).join("")}</ul>
+
+      <div class="divider"></div>
+      <div style="font-weight:600; font-size:13.5px;">📋 Sugerencias para el próximo lote</div>
       <ul class="suggestion-list">${batch.score.suggestions.map((s) => `<li>${s}</li>`).join("")}</ul>
 
       <div class="divider"></div>
@@ -287,6 +291,7 @@ const UIBatches = {
 
       const batch = {
         id: existing ? existing.id : undefined,
+        number: existing ? existing.number : Storage.getNextBatchNumber(),
         name,
         servings,
         items: validItems,

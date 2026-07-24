@@ -90,4 +90,33 @@ const Score = {
     if (total >= 50) return { text: "Mejorable", cls: "score-ok" };
     return { text: "Desbalanceado", cls: "score-bad" };
   },
+
+  // Sugerencias de qué sumar FRESCO al momento de servir (no al lote), ya que
+  // las viandas suelen congelarse sin el acompañamiento de carbohidrato o la
+  // ensalada cruda, que se agregan recién al calentar y servir.
+  targetsForServing: {
+    carbsGood: 55,      // g de carbohidrato para una porción completa
+    fiberGood: 6,       // g de fibra para una porción completa
+    fatMin: 12,         // g de grasa mínima recomendada
+  },
+
+  servingAdditions(perServing) {
+    const s = [];
+    const t = this.targetsForServing;
+
+    if (perServing.carbs < t.carbsGood) {
+      const deficit = t.carbsGood - perServing.carbs;
+      const gramsPapa = Math.round(deficit / 0.17 / 10) * 10;   // ~17g carbs/100g papa cocida
+      const gramsArroz = Math.round(deficit / 0.28 / 10) * 10;  // ~28g carbs/100g arroz cocido
+      s.push(`Sumá un acompañamiento de carbohidrato fresco al servir: ~${gramsPapa}g de papa o batata cocida, o ~${gramsArroz}g de arroz, para completar la porción.`);
+    }
+    if (perServing.fiber < t.fiberGood) {
+      s.push("Agregá una ensalada cruda o vegetales salteados frescos (150-200g) al momento de servir para sumar fibra.");
+    }
+    if (perServing.fat < t.fatMin) {
+      s.push("Un chorrito de aceite de oliva crudo al servir ayuda con la grasa y la saciedad.");
+    }
+    if (s.length === 0) s.push("Esta porción ya viene bastante completa — no necesita mucho agregado extra al servir.");
+    return s;
+  },
 };
