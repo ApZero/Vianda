@@ -1,5 +1,5 @@
 // Bump CACHE_NAME en cada deploy para forzar la actualización en Android/Chrome
-const CACHE_NAME = "vianda-v1";
+const CACHE_NAME = "vianda-v2";
 const ASSETS = [
   "./",
   "./index.html",
