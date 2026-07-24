@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="es-PY">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Vianda — Viandas congeladas</title>
+<meta name="theme-color" content="#3D4A3D">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="css/style.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-mark">V</span>
+    <span class="brand-name">Vianda</span>
+  </div>
+  <button id="backupBtn" class="icon-btn" title="Exportar respaldo">⤓</button>
+</header>
+
+<main id="view" class="view"></main>
+
+<nav class="tabbar">
+  <button class="tab active" data-tab="hoy"><span class="tab-icon">◐</span><span>Hoy</span></button>
+  <button class="tab" data-tab="lotes"><span class="tab-icon">▤</span><span>Lotes</span></button>
+  <button class="tab" data-tab="congelador"><span class="tab-icon">❄</span><span>Freezer</span></button>
+  <button class="tab" data-tab="ingredientes"><span class="tab-icon">✦</span><span>Ingred.</span></button>
+  <button class="tab" data-tab="stats"><span class="tab-icon">▲</span><span>Stats</span></button>
+</nav>
+
+<div id="modalRoot"></div>
+<div id="toast" class="toast"></div>
+
+<script src="js/seed-ingredients.js"></script>
+<script src="js/storage.js"></script>
+<script src="js/nutrition.js"></script>
+<script src="js/score.js"></script>
+<script src="js/backup.js"></script>
+<script src="js/ui-ingredients.js"></script>
+<script src="js/ui-batches.js"></script>
+<script src="js/ui-freezer.js"></script>
+<script src="js/ui-stats.js"></script>
+<script src="js/ui-home.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
