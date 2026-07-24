@@ -28,10 +28,9 @@ const UIFreezer = {
           <span class="pill">${Nutrition.round0(b.perServing.kcal)} kcal</span>
         </div>
         <div class="progress-track"><div class="progress-fill" style="width:${pct}%;"></div></div>
-        <div class="flex-between" style="margin-top:12px; gap:8px; flex-wrap: wrap;">
-          <button class="btn btn-secondary btn-sm" data-eat="${b.id}" data-n="1">Comí 1 porción</button>
-          <button class="btn btn-secondary btn-sm" data-eat="${b.id}" data-n="2">Comimos 2</button>
+        <div class="flex-between" style="margin-top:12px; gap:8px;">
           <button class="btn btn-ghost btn-sm" data-history="${b.id}">Historial</button>
+          <button class="btn btn-secondary btn-sm" data-quickadd="${b.id}" style="width:38px; padding:7px 0; font-size:16px;">+</button>
         </div>
       </div>`;
     };
@@ -72,8 +71,8 @@ const UIFreezer = {
       <button class="fab" id="addFrozenBtn">+</button>
     `;
 
-    view.querySelectorAll("[data-eat]").forEach((btn) => {
-      btn.addEventListener("click", () => this.markEaten(btn.dataset.eat, parseInt(btn.dataset.n, 10)));
+    view.querySelectorAll("[data-quickadd]").forEach((btn) => {
+      btn.addEventListener("click", () => this.openQuickAdd(btn.dataset.quickadd));
     });
     view.querySelectorAll("[data-history]").forEach((btn) => {
       btn.addEventListener("click", () => this.openHistory(btn.dataset.history));
@@ -101,16 +100,36 @@ const UIFreezer = {
   },
 
   // ---------- Lotes: marcar comido + historial editable ----------
-  markEaten(batchId, n) {
-    const batches = Storage.getBatches();
-    const batch = batches.find((b) => b.id === batchId);
+  openQuickAdd(batchId) {
+    const batch = Storage.getBatches().find((b) => b.id === batchId);
     if (!batch) return;
-    batch.consumptionLog = batch.consumptionLog || [];
-    batch.consumptionLog.push({ id: uid(), date: new Date().toISOString(), count: n });
-    Storage.recomputeBatchRemaining(batch);
-    Storage.upsertBatch(batch);
-    toast(batch.status === "archived" ? `"${batch.name}" terminado — archivado` : `Anotado: ${n} porción(es) de "${batch.name}"`);
-    render();
+    const settings = Storage.getSettings();
+
+    openModal(`
+      <div class="modal-header">
+        <h3>Registrar consumo</h3>
+        <button class="modal-close" onclick="closeModal()">✕</button>
+      </div>
+      <p class="muted" style="margin-top:0;">#${batch.number} ${batch.name}</p>
+      <div class="field-row">
+        <div><label>Fecha</label><input id="qa-date" type="date" value="${todayISODate()}"></div>
+        <div><label>Porciones</label><input id="qa-count" type="number" min="1" step="1" value="${settings.peoplePerDay || 2}"></div>
+      </div>
+      <button class="btn btn-primary btn-block" id="qaSaveBtn" style="margin-top:18px;">Guardar</button>
+    `);
+
+    document.getElementById("qaSaveBtn").addEventListener("click", () => {
+      const date = document.getElementById("qa-date").value || todayISODate();
+      const count = parseFloat(document.getElementById("qa-count").value) || 0;
+      if (count <= 0) { toast("Poné una cantidad"); return; }
+      batch.consumptionLog = batch.consumptionLog || [];
+      batch.consumptionLog.push({ id: uid(), date: new Date(date).toISOString(), count });
+      Storage.recomputeBatchRemaining(batch);
+      Storage.upsertBatch(batch);
+      closeModal();
+      toast(batch.status === "archived" ? `"${batch.name}" terminado — archivado` : `Anotado: ${count} porción(es) de "${batch.name}"`);
+      render();
+    });
   },
 
   openHistory(batchId) {
@@ -128,15 +147,13 @@ const UIFreezer = {
         <p class="muted">Editá o borrá un registro si te equivocaste, o agregá uno de un día que te olvidaste de anotar.</p>
         <div id="historyRows">
           ${entries.length === 0 ? `<p class="muted">Todavía no hay registros para este lote.</p>` : entries.map((e) => `
-            <div class="ing-row" data-eid="${e.id}">
-              <div class="ing-row-main">
-                <input class="hist-date" type="date" value="${e.date.slice(0, 10)}">
-                <div class="ing-row-amount">
-                  <input class="hist-count" type="number" min="0" step="1" value="${e.count}" style="text-align:right;">
-                  <span class="pill" style="flex-shrink:0;">porc.</span>
-                </div>
-                <button class="rm" data-rmhist="${e.id}">✕</button>
+            <div class="hist-row" data-eid="${e.id}">
+              <input class="hist-date" type="date" value="${e.date.slice(0, 10)}">
+              <div class="hist-count-wrap">
+                <input class="hist-count" type="number" min="0" step="1" value="${e.count}">
+                <span class="hist-count-label">porc.</span>
               </div>
+              <button class="rm" data-rmhist="${e.id}">✕</button>
             </div>
           `).join("")}
         </div>

@@ -51,7 +51,7 @@ const UIHome = {
       <div class="card">
         <div class="card-row">
           <div>
-            <div style="font-weight:600;">#${lowest.number} ${lowest.name}</div>
+            <div style="font-weight:600;"><span class="pill mono" style="margin-right:6px;">#${lowest.number}</span>${lowest.name}</div>
             <div class="muted">${lowest.servingsRemaining} de ${lowest.servings} porciones</div>
           </div>
           <span class="score-badge ${Score.label(lowest.score.total).cls}">${lowest.score.total}</span>
