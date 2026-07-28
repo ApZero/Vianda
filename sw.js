@@ -1,5 +1,5 @@
 // Bump CACHE_NAME en cada deploy para forzar la actualización en Android/Chrome
-const CACHE_NAME = "vianda-v5";
+const CACHE_NAME = "vianda-v7";
 const ASSETS = [
   "./",
   "./index.html",
@@ -11,6 +11,7 @@ const ASSETS = [
   "./js/score.js",
   "./js/suggestions.js",
   "./js/backup.js",
+  "./js/foodapi.js",
   "./js/ui-ingredients.js",
   "./js/ui-batches.js",
   "./js/ui-freezer.js",
