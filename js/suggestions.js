@@ -94,3 +94,109 @@ const BatchSuggestions = {
     return { name: template.name, items, skipped };
   },
 };
+
+// ---------- Generador "con mis ingredientes" ----------
+// Rangos realistas de gramos POR PORCIÓN (min, max), para que la búsqueda de
+// cantidades no proponga algo imposible de cocinar (como 3g de cebolla o
+// 400g de aceite). Si un ingrediente no está en la lista puntual, se usa un
+// rango genérico según su categoría.
+const INGREDIENT_BOUNDS = {
+  "pollo (pechuga)": [80, 180],
+  "carne molida": [70, 150],
+  "tomate": [30, 100],
+  "cebolla": [20, 60],
+  "ajo": [2, 10],
+  "sal": [0.5, 3],
+  "papa": [60, 180],
+  "lentejas (secas)": [25, 55],
+  "morrón verde": [20, 70],
+  "batata": [60, 150],
+  "aceite de oliva": [5, 18],
+  "aceite de girasol": [5, 18],
+  "zanahoria": [20, 80],
+  "pimentón dulce (polvo)": [0.5, 3],
+  "pimienta negra": [0.3, 2],
+  "garbanzos (secos)": [25, 55],
+  "zapallo": [50, 150],
+  "arroz integral": [25, 60],
+  "brócoli": [40, 150],
+};
+const CATEGORY_BOUNDS = {
+  proteina: [70, 160],
+  carbohidrato: [25, 120],
+  vegetal: [25, 100],
+  grasa: [5, 18],
+  condimento: [0.3, 3],
+};
+
+const BatchOptimizer = {
+  boundsFor(ing) {
+    const key = ing.name.trim().toLowerCase();
+    if (INGREDIENT_BOUNDS[key]) return INGREDIENT_BOUNDS[key];
+    return CATEGORY_BOUNDS[ing.category] || [10, 100];
+  },
+
+  // Búsqueda por coordenadas (hill-climbing): parte del punto medio de cada
+  // rango realista y ajusta de a un ingrediente por vez, en pasadas con paso
+  // cada vez más fino, buscando el puntaje total más alto posible sin salirse
+  // de los rangos. No es una IA — es una búsqueda numérica simple, pero
+  // suficiente para converger bien con pocos ingredientes.
+  optimize(ingredientIds, servings, ingredientsById) {
+    const list = ingredientIds
+      .map((id) => ingredientsById[id])
+      .filter((ing) => ing && !ing.hasGluten && !ing.isSeafood);
+    if (list.length === 0) return { items: [], score: 0 };
+
+    const state = list.map((ing) => {
+      const [minPer, maxPer] = this.boundsFor(ing);
+      const min = Nutrition.round1(minPer * servings);
+      const max = Nutrition.round1(maxPer * servings);
+      return { ing, min, max, grams: Nutrition.round1((min + max) / 2) };
+    });
+
+    const scoreOf = () => {
+      const items = state.map((s) => ({ ingredientId: s.ing.id, grams: s.grams }));
+      const totals = Nutrition.computeTotals(items, ingredientsById);
+      const per = Nutrition.perServing(totals, servings);
+      return Score.evaluate(per, items, ingredientsById).total;
+    };
+
+    let stepFraction = 0.25;
+    for (let pass = 0; pass < 7; pass++) {
+      for (const s of state) {
+        const step = (s.max - s.min) * stepFraction;
+        if (step <= 0) continue;
+        const candidates = [s.grams - step, s.grams + step]
+          .map((g) => Math.min(s.max, Math.max(s.min, Nutrition.round1(g))));
+        let bestGrams = s.grams;
+        let bestScore = scoreOf();
+        for (const cand of candidates) {
+          if (cand === s.grams) continue;
+          const prev = s.grams;
+          s.grams = cand;
+          const sc = scoreOf();
+          if (sc > bestScore) { bestScore = sc; bestGrams = cand; }
+          s.grams = prev;
+        }
+        s.grams = bestGrams;
+      }
+      stepFraction *= 0.55;
+    }
+
+    const finalScore = scoreOf();
+    const items = state.map((s) => {
+      const grams = Nutrition.round1(s.grams);
+      let unit = "g";
+      let amount = grams;
+      const spoonUnit = s.ing.tbspGrams ? "tbsp" : (s.ing.tspGrams ? "tsp" : null);
+      const useSpoon = spoonUnit && (s.ing.category === "grasa" || s.ing.category === "condimento");
+      if (useSpoon) {
+        unit = spoonUnit;
+        amount = Math.round(Nutrition.fromGrams(s.ing, grams, unit) * 100) / 100;
+      }
+      return { ingredientId: s.ing.id, amount, unit, grams };
+    });
+
+    return { items, score: finalScore };
+  },
+};

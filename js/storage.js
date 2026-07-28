@@ -12,6 +12,7 @@ const DEFAULT_SETTINGS = {
   lowStockThreshold: 4,     // porciones totales antes de avisar
   peoplePerDay: 2,          // porciones consumidas por día (referencia)
   expiryWarningDays: 5,     // avisar cuando un congelado esté a esta cantidad de días de su fecha límite
+  usdaApiKey: "",           // clave opcional para USDA FoodData Central (vacío = usa DEMO_KEY)
 };
 
 function uid() {

@@ -157,9 +157,17 @@ const UIBatches = {
 
       <label>Cantidad de porciones que rinde</label>
       <input id="f-servings" type="number" min="1" step="1" value="${base.servings}">
+      <label style="display:flex; align-items:center; gap:8px; margin-top:8px; font-weight:500;">
+        <input id="f-lockratio" type="checkbox" style="width:auto;">
+        🔒 Mantener la proporción de ingredientes si cambio las porciones
+      </label>
 
-      <button class="btn btn-secondary btn-block" id="suggestBtn" style="margin-top:14px;">✨ Sugerir lote balanceado</button>
+      <div class="field-row" style="margin-top:14px;">
+        <div><button class="btn btn-secondary btn-block" id="suggestBtn">✨ Recetas sugeridas</button></div>
+        <div><button class="btn btn-secondary btn-block" id="customBtn">🧪 Con mis ingredientes</button></div>
+      </div>
       <div id="suggestPanel" class="card" style="display:none; margin-top:10px;"></div>
+      <div id="customPanel" class="card" style="display:none; margin-top:10px;"></div>
 
       <label>Ingredientes</label>
       <div id="ingRows"></div>
@@ -277,10 +285,28 @@ const UIBatches = {
       renderRows();
       renderPreview();
     });
-    document.getElementById("f-servings").addEventListener("input", renderPreview);
+    let lastServings = parseInt(document.getElementById("f-servings").value, 10) || base.servings || 1;
+    document.getElementById("f-servings").addEventListener("input", (e) => {
+      const newServings = parseInt(e.target.value, 10) || 1;
+      const lockOn = document.getElementById("f-lockratio").checked;
+      if (lockOn && newServings !== lastServings && workingItems.length > 0) {
+        const scaled = Nutrition.scaleItems(workingItems, lastServings, newServings);
+        workingItems.length = 0;
+        scaled.forEach((it) => workingItems.push(it));
+        renderRows();
+      }
+      lastServings = newServings;
+      renderPreview();
+    });
+    document.getElementById("f-lockratio").addEventListener("change", () => {
+      lastServings = parseInt(document.getElementById("f-servings").value, 10) || lastServings;
+    });
 
     const suggestPanel = document.getElementById("suggestPanel");
+    const customPanel = document.getElementById("customPanel");
+
     document.getElementById("suggestBtn").addEventListener("click", () => {
+      customPanel.style.display = "none";
       const isOpen = suggestPanel.style.display !== "none";
       if (isOpen) { suggestPanel.style.display = "none"; return; }
       suggestPanel.innerHTML = `
@@ -300,12 +326,53 @@ const UIBatches = {
           const result = BatchSuggestions.build(el.dataset.tpl, servings, ingredients);
           workingItems.length = 0;
           result.items.forEach((it) => workingItems.push(it));
-          document.getElementById("f-batchname").value = result.name;
+          if (!document.getElementById("f-batchname").value.trim()) document.getElementById("f-batchname").value = result.name;
           suggestPanel.style.display = "none";
           renderRows();
           renderPreview();
           toast(result.skipped.length ? `Receta aplicada (se omitió: ${result.skipped.join(", ")})` : "Receta aplicada — ajustá lo que quieras antes de guardar ✓");
         });
+      });
+    });
+
+    document.getElementById("customBtn").addEventListener("click", () => {
+      suggestPanel.style.display = "none";
+      const isOpen = customPanel.style.display !== "none";
+      if (isOpen) { customPanel.style.display = "none"; return; }
+
+      const eligible = ingredients.filter((i) => !i.hasGluten && !i.isSeafood);
+      const grouped = {};
+      eligible.forEach((i) => { (grouped[i.category] = grouped[i.category] || []).push(i); });
+
+      customPanel.innerHTML = `
+        <div class="muted" style="font-size:12.5px; margin-bottom:8px;">
+          Elegí los ingredientes que querés usar. La app va a probar cantidades dentro de rangos realistas de cocina para acercarse al mejor puntaje posible.
+        </div>
+        ${Object.entries(grouped).map(([cat, list]) => `
+          <div style="font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.04em; color:var(--ink-soft); margin:10px 0 4px;">${CATEGORY_LABELS[cat] || cat}</div>
+          ${list.map((i) => `
+            <label class="flex-between" style="padding:6px 0; border-bottom:1px solid var(--line);">
+              <span>${i.name}</span>
+              <input type="checkbox" data-custom-ing="${i.id}" style="width:auto;">
+            </label>
+          `).join("")}
+        `).join("")}
+        <button class="btn btn-primary btn-block" id="customGenerateBtn" style="margin-top:14px;">Generar cantidades</button>
+      `;
+      customPanel.style.display = "block";
+
+      document.getElementById("customGenerateBtn").addEventListener("click", () => {
+        const selectedIds = Array.from(customPanel.querySelectorAll("[data-custom-ing]:checked")).map((el) => el.dataset.customIng);
+        if (selectedIds.length === 0) { toast("Elegí al menos un ingrediente"); return; }
+        if (workingItems.length > 0 && !confirm("Esto reemplaza los ingredientes que ya cargaste en este lote. ¿Continuar?")) return;
+        const servings = parseInt(document.getElementById("f-servings").value, 10) || base.servings || 4;
+        const result = BatchOptimizer.optimize(selectedIds, servings, ingredientsById);
+        workingItems.length = 0;
+        result.items.forEach((it) => workingItems.push(it));
+        customPanel.style.display = "none";
+        renderRows();
+        renderPreview();
+        toast(`Cantidades generadas — puntaje estimado: ${result.score}`);
       });
     });
 

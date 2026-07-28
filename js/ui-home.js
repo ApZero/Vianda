@@ -95,6 +95,12 @@ const UIHome = {
       <input id="s-expiry" type="number" min="0" step="1" value="${settings.expiryWarningDays}">
 
       <div class="divider"></div>
+      <div style="font-weight:600; font-size:13.5px;">Base de datos de ingredientes</div>
+      <label>Clave API de USDA FoodData Central (opcional)</label>
+      <input id="s-usdakey" value="${settings.usdaApiKey || ""}" placeholder="Vacío = usa DEMO_KEY (límite bajo)">
+      <p class="muted" style="margin-top:4px;">Se usa para buscar ingredientes por nombre en Ingredientes. Podés conseguir una clave gratis en <a href="https://fdc.nal.usda.gov/api-key-signup.html" target="_blank" rel="noopener">fdc.nal.usda.gov/api-key-signup.html</a> — sin eso funciona igual, pero con muy pocas búsquedas por día.</p>
+
+      <div class="divider"></div>
       <div style="font-weight:600; font-size:13.5px; margin-bottom:8px;">Respaldo</div>
       <p class="muted" style="margin-top:0;">Se genera un respaldo automático la primera vez que abrís la app cada día. También podés exportar o importar manualmente.</p>
       <div class="flex-between" style="gap:10px;">
@@ -111,6 +117,7 @@ const UIHome = {
         lowStockThreshold: parseInt(document.getElementById("s-threshold").value, 10) || 0,
         peoplePerDay: parseInt(document.getElementById("s-people").value, 10) || 1,
         expiryWarningDays: parseInt(document.getElementById("s-expiry").value, 10) || 0,
+        usdaApiKey: document.getElementById("s-usdakey").value.trim(),
       };
       Storage.saveSettings(updated);
       closeModal();
