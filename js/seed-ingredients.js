@@ -6,6 +6,9 @@
 //   mlGrams   = gramos por mililitro (densidad) — típico de líquidos como aceites
 //   tspGrams  = gramos por cucharadita (cdta, ~5ml)
 //   tbspGrams = gramos por cucharada (cda, ~15ml)
+//
+// hasGluten / isSeafood (opcional, default false): se usan para excluir el ingrediente
+// de las recetas balanceadas que sugiere la app automáticamente.
 const SEED_INGREDIENTS = [
   { name: "Pollo (pechuga)",       category: "proteina",      kcal: 165, protein: 31,  carbs: 0,    fat: 3.6,  fiber: 0,    sodium: 74,    pricePerKg: 18000 },
   { name: "Carne molida",          category: "proteina",      kcal: 254, protein: 17,  carbs: 0,    fat: 20,   fiber: 0,    sodium: 66,    pricePerKg: 26000 },
@@ -22,4 +25,9 @@ const SEED_INGREDIENTS = [
   { name: "Zanahoria",             category: "vegetal",       kcal: 41,  protein: 0.9, carbs: 10,   fat: 0.2,  fiber: 2.8,  sodium: 69,    pricePerKg: 5000 },
   { name: "Pimentón dulce (polvo)",category: "condimento",    kcal: 282, protein: 14.1,carbs: 54,   fat: 12.9, fiber: 34.9, sodium: 68,    pricePerKg: 25000, tspGrams: 2.3, tbspGrams: 6.9 },
   { name: "Pimienta negra",        category: "condimento",    kcal: 251, protein: 10.4,carbs: 64,   fat: 3.3,  fiber: 25.3, sodium: 20,    pricePerKg: 30000, tspGrams: 2.1, tbspGrams: 6.3 },
+  { name: "Garbanzos (secos)",     category: "carbohidrato",  kcal: 378, protein: 20.5,carbs: 63,   fat: 6,    fiber: 12,   sodium: 24,    pricePerKg: 13000 },
+  { name: "Zapallo",               category: "vegetal",       kcal: 26,  protein: 1,   carbs: 6.5,  fat: 0.1,  fiber: 0.5,  sodium: 1,     pricePerKg: 4500 },
+  { name: "Arroz integral",        category: "carbohidrato",  kcal: 370, protein: 7.9, carbs: 77,   fat: 2.9,  fiber: 3.5,  sodium: 5,     pricePerKg: 9000 },
+  { name: "Brócoli",               category: "vegetal",       kcal: 34,  protein: 2.8, carbs: 6.6,  fat: 0.4,  fiber: 2.6,  sodium: 33,    pricePerKg: 9000 },
 ];
+

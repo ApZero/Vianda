@@ -158,6 +158,9 @@ const UIBatches = {
       <label>Cantidad de porciones que rinde</label>
       <input id="f-servings" type="number" min="1" step="1" value="${base.servings}">
 
+      <button class="btn btn-secondary btn-block" id="suggestBtn" style="margin-top:14px;">✨ Sugerir lote balanceado</button>
+      <div id="suggestPanel" class="card" style="display:none; margin-top:10px;"></div>
+
       <label>Ingredientes</label>
       <div id="ingRows"></div>
       <button class="btn btn-secondary btn-sm" id="addRowBtn" style="margin-top:8px;">+ Agregar ingrediente</button>
@@ -216,7 +219,8 @@ const UIBatches = {
           rowEl.querySelector(".row-amount").addEventListener("input", (e) => {
             workingItems[idx].amount = parseFloat(e.target.value) || 0;
             recomputeGrams(workingItems[idx]);
-            renderRows();
+            const hintEl = rowEl.querySelector(".ing-row-hint");
+            if (hintEl) hintEl.textContent = `≈ ${workingItems[idx].grams} g`;
             renderPreview();
           });
           rowEl.querySelector(".row-unit").addEventListener("change", (e) => {
@@ -274,6 +278,36 @@ const UIBatches = {
       renderPreview();
     });
     document.getElementById("f-servings").addEventListener("input", renderPreview);
+
+    const suggestPanel = document.getElementById("suggestPanel");
+    document.getElementById("suggestBtn").addEventListener("click", () => {
+      const isOpen = suggestPanel.style.display !== "none";
+      if (isOpen) { suggestPanel.style.display = "none"; return; }
+      suggestPanel.innerHTML = `
+        <div class="muted" style="font-size:12.5px; margin-bottom:8px;">Elegí una receta pensada para dar un puntaje alto. Reemplaza los ingredientes actuales del lote — podés editarla después.</div>
+        ${BatchSuggestions.list().map((t) => `
+          <div class="card-tap" data-tpl="${t.key}" style="padding:10px 0; border-bottom:1px solid var(--line);">
+            <div style="font-weight:600; font-size:14px;">${t.name}</div>
+            <div class="muted" style="font-size:12.5px; margin-top:2px;">${t.blurb}</div>
+          </div>
+        `).join("")}
+      `;
+      suggestPanel.style.display = "block";
+      suggestPanel.querySelectorAll("[data-tpl]").forEach((el) => {
+        el.addEventListener("click", () => {
+          if (workingItems.length > 0 && !confirm("Esto reemplaza los ingredientes que ya cargaste en este lote. ¿Continuar?")) return;
+          const servings = parseInt(document.getElementById("f-servings").value, 10) || base.servings || 4;
+          const result = BatchSuggestions.build(el.dataset.tpl, servings, ingredients);
+          workingItems.length = 0;
+          result.items.forEach((it) => workingItems.push(it));
+          document.getElementById("f-batchname").value = result.name;
+          suggestPanel.style.display = "none";
+          renderRows();
+          renderPreview();
+          toast(result.skipped.length ? `Receta aplicada (se omitió: ${result.skipped.join(", ")})` : "Receta aplicada — ajustá lo que quieras antes de guardar ✓");
+        });
+      });
+    });
 
     renderRows();
     renderPreview();

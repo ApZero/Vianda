@@ -88,6 +88,15 @@ const UIIngredients = {
       <label>g por cda (cucharada)</label>
       <input id="f-tbspgrams" type="number" step="0.1" value="${v.tbspGrams || ""}" placeholder="ej: 13.6">
 
+      <div class="divider"></div>
+      <label style="display:flex; align-items:center; gap:8px; margin-top:0;">
+        <input id="f-gluten" type="checkbox" style="width:auto;" ${v.hasGluten ? "checked" : ""}> Contiene gluten
+      </label>
+      <label style="display:flex; align-items:center; gap:8px; margin-top:8px;">
+        <input id="f-seafood" type="checkbox" style="width:auto;" ${v.isSeafood ? "checked" : ""}> Es marisco/pescado
+      </label>
+      <p class="muted" style="margin-top:6px;">Estos dos se usan para que el generador de lotes balanceados no los proponga automáticamente.</p>
+
       <div class="flex-between" style="margin-top:20px; gap:10px;">
         ${ing ? `<button class="btn btn-danger" id="delIngBtn">Eliminar</button>` : `<span></span>`}
         <button class="btn btn-primary" id="saveIngBtn">Guardar</button>
@@ -111,6 +120,8 @@ const UIIngredients = {
         mlGrams: parseFloat(document.getElementById("f-mlgrams").value) || undefined,
         tspGrams: parseFloat(document.getElementById("f-tspgrams").value) || undefined,
         tbspGrams: parseFloat(document.getElementById("f-tbspgrams").value) || undefined,
+        hasGluten: document.getElementById("f-gluten").checked || undefined,
+        isSeafood: document.getElementById("f-seafood").checked || undefined,
       };
       Storage.upsertIngredient(updated);
       closeModal();
